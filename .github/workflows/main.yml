@@ -1,4 +1,4 @@
-name: Build Gemini WA Bot APK v4.5
+name: Build Gemini WA Bot APK v4.6
 
 on:
   push:
@@ -9,18 +9,22 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   build-android-apk:
-    name: Compile Engine & Build APK v4.5 (Video BG Loop + Screen Share Mode)
+    name: Compile Engine & Build APK v4.6 (PiP Pairing + Cinematic Welcome + AQ Key)
     runs-on: ubuntu-latest
 
     steps:
       - name: 1. Checkout Repository
         uses: actions/checkout@v4
 
-      - name: 2. Extract Project ZIP & Persistent Keystore
+      - name: 2. Bersihkan Kuota Artifact Lama & Ekstrak Proyek
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          gh api repos/${{ github.repository }}/actions/artifacts --paginate --jq '.artifacts[].id' 2>/dev/null | head -n 30 | xargs -r -n1 -I{} gh api -X DELETE repos/${{ github.repository }}/actions/artifacts/{} 2>/dev/null || true
           for z in gemini-wa-bot-apk-github.zip *.zip; do
             if [ -f "$z" ]; then
               echo "Extracting $z..."
@@ -61,28 +65,35 @@ jobs:
           gradle-version: '8.7'
           dependency-graph: disabled
 
-      - name: 7. Build Signed APK v4.5 (Update In-Place Without Uninstall)
+      - name: 7. Build Signed APK v4.6 (Update In-Place Without Uninstall)
         run: |
           gradle assembleDebug --no-daemon --stacktrace
-          cp app/build/outputs/apk/debug/app-debug.apk Gemini-WA-Bot-v4.5.apk
-          ls -lh Gemini-WA-Bot-v4.5.apk
+          cp app/build/outputs/apk/debug/app-debug.apk Gemini-WA-Bot-v4.6.apk
+          ls -lh Gemini-WA-Bot-v4.6.apk
 
-      - name: 8. Upload APK to Workflow Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: Gemini-WA-Bot-APK-v4.5
-          path: Gemini-WA-Bot-v4.5.apk
-          if-no-files-found: error
-
-      - name: 9. Publish APK to GitHub Releases
+      - name: 8. Publish APK ke GitHub Releases (Bebas Kuota Storage & Langsung Download!)
         uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v4.6.${{ github.run_number }}
+          name: "DodosBot / Gemini WA Bot APK v4.6 Build #${{ github.run_number }}"
+          body: |
+            ### 🤖 DodosBot / Gemini WhatsApp Bot APK v4.6
+            Klik **`Gemini-WA-Bot-v4.6.apk`** di bawah bagian **Assets** untuk langsung men-download APK!
+            - **🪟 Mode Jendela Kecil (Floating PiP Pairing) + Anti-Freeze Socket**: APK mengambang di atas layar WhatsApp saat menautkan kode agar mesin lokal tidak dibekukan oleh HP dan langsung masuk tanpa *loading* gantung.
+            - **🎬 Animasi Cinematic `W E L C O M E` Saat Login** + **Video Background Loop (`bg_loop.mp4`)** + **🔓 Mode Tidak Aman (Tampil Saat Share Screen)**.
+            - **🔑 Dukungan Penuh API Key Format Baru `AQ.` (`AQ.Ab8RN6...`)** & **Custom Nama Bot via APK**.
+          files: Gemini-WA-Bot-v4.6.apk
+
+      - name: 9. Tampilkan Link Download Langsung di Halaman Summary
+        run: |
+          echo "### ✅ APK v4.6 Berhasil Dibuat!" >> $GITHUB_STEP_SUMMARY
+          echo "👉 **[KLIK DI SINI UNTUK DOWNLOAD LANGSUNG Gemini-WA-Bot-v4.6.apk](https://github.com/${{ github.repository }}/releases/download/v4.6.${{ github.run_number }}/Gemini-WA-Bot-v4.6.apk)**" >> $GITHUB_STEP_SUMMARY
+
+      - name: 10. Upload APK ke Workflow Artifacts (Opsional)
+        uses: actions/upload-artifact@v4
         continue-on-error: true
         with:
-          tag_name: v4.5.${{ github.run_number }}
-          name: "DodosBot / Gemini WA Bot APK v4.5 Build #${{ github.run_number }}"
-          body: |
-            ### 🤖 DodosBot / Gemini WhatsApp Bot APK v4.5
-            - **🎬 Video Background Loop Setelah Login (`bg_loop.mp4` via `TextureView`)** + tombol **🔊 Musik ON/OFF** & kartu UI semi-transparan.
-            - **🔓 Mode Tidak Aman (Tampil Saat Berbagi Layar / Anti-Layar Hitam)**: Menonaktifkan blokir `FLAG_SECURE` dan proteksi layar sensitif Android 14/15 (`CONTENT_SENSITIVITY_NOT_SENSITIVE`) agar layar aplikasi & video background tetap terlihat jelas oleh penonton saat *Share Screen* di WhatsApp Video Call / Discord.
-            - **🔒 Sertifikat Root CA Mozilla (`x509roots/fallback`)** untuk Mode Mandiri di HP.
-          files: Gemini-WA-Bot-v4.5.apk
+          name: Gemini-WA-Bot-APK-v4.6
+          path: Gemini-WA-Bot-v4.6.apk
+          retention-days: 1
+          if-no-files-found: ignore
